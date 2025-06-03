@@ -7,10 +7,11 @@ For more information on this file, see
 https://docs.djangoproject.com/en/4.2/topics/settings/
 
 For the full list of settings and their values, see
-https://docs.djangoproject.com/en/4.2/ref/settings/
+https://docs.djangoproject.com/en/4.2/ref/settings/#values
 """
 
 from pathlib import Path
+from datetime import timedelta # <--- ADD THIS IMPORT
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,23 +41,30 @@ INSTALLED_APPS = [
     'recipes',
     'rest_framework',
     'corsheaders',
+    'users', # Your users app
+    'rest_framework_simplejwt', # <--- ADD THIS LINE for Simple JWT
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
+    # --- IMPORTANT: CORS Middleware must come *before* Django's CommonMiddleware
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware', # This should be AFTER CorsMiddleware
+    # ---
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
+    # 'django.middleware.common.CommonMiddleware', # <--- REMOVE THIS DUPLICATE LINE
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # React development server
+    "http://localhost:5173",  # React development server (Vite default)
+    # If your React app is running on http://127.0.0.1:5173, add that too:
+    # "http://127.0.0.1:5173",
 ]
+CORS_ALLOW_CREDENTIALS = True 
 
 ROOT_URLCONF = 'backend.urls'
 
@@ -130,3 +138,44 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# --- Django REST Framework and Simple JWT Settings ---
+# <--- ADD THESE SECTIONS (copy-paste from previous examples) ---
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication', # Optional: for browsable API
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated', # Default to requiring authentication
+    ),
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),  # How long access token is valid
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),   # How long refresh token is valid
+    "ROTATE_REFRESH_TOKENS": True, # Recommended for security
+    "BLACKLIST_AFTER_ROTATION": True, # Recommended for security
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY, # Uses your Django SECRET_KEY by default
+    "VERIFYING_KEY": "",
+    "AUDIENCE": None,
+    "ISSUER": None,
+    "JWK_URL": None,
+    "LEEWAY": 0,
+
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+    "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
+
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
+    "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
+
+    "JTI_CLAIM": "jti",
+
+    "SLIDING_TOKEN_LIFETIME": timedelta(minutes=5),
+    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
+}
